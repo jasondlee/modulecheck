@@ -287,7 +287,7 @@ main() {
             log_slug=$(echo "$module_name" | tr '.' '-')
             local log_file="$RESULTS_DIR/logs/${log_slug}_line${line_num}.log"
 
-            local mvn_cmd=(mvn -f "$TEST_DIR/pom.xml" -Dtest="$TEST_FILTER" -Djboss.home="$WILDFLY_DIR" -Djboss.install.dir="$WILDFLY_DIR" clean verify)
+            local mvn_cmd=(mvn -f "$TEST_DIR/pom.xml" -Dtest="$TEST_FILTER" -Djboss.home="$WILDFLY_DIR" -Djboss.install.dir="$WILDFLY_DIR" -ff clean verify)
             local test_start
             test_start=$(date +%s)
             local test_result=0
