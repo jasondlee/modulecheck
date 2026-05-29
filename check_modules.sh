@@ -114,6 +114,7 @@ parse_args() {
 }
 
 cleanup() {
+    set_title ""
     if [[ -n "$CURRENT_BACKUP" && -f "$CURRENT_BACKUP" && -n "$CURRENT_MODULE" ]]; then
         echo ""
         echo "Restoring $CURRENT_MODULE from backup..."
@@ -182,6 +183,10 @@ extract_entry_description() {
 extract_module_name() {
     local file="$1"
     grep -oE 'module name="[^"]*"' "$file" | head -1 | sed 's/module name="//; s/"//'
+}
+
+set_title() {
+    printf '\033]0;%s\007' "$1" 2>/dev/null
 }
 
 format_duration() {
@@ -254,6 +259,7 @@ main() {
             local entry_desc
             entry_desc=$(extract_entry_description "$module_file" "$line_num")
 
+            set_title "[module $module_index/$TOTAL_MODULES] [artifact $entry_index/$entry_count] $module_name — $entry_desc"
             printf "  [%3d/%-3d] TESTING     %s\n" "$entry_index" "$entry_count" "$entry_desc"
 
             CURRENT_MODULE="$module_file"
