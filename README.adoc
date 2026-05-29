@@ -1,0 +1,175 @@
+= modulecheck
+
+A bash utility that identifies potentially unnecessary JARs in JBoss/WildFly module definitions.
+
+== How It Works
+
+The script iterates over every `module.xml` file under the specified module directories. For each uncommented `<resource-root>` or `<artifact>` entry, it:
+
+1. Backs up the `module.xml` file.
+2. Comments out the entry.
+3. Runs a Maven test suite.
+4. If the tests pass, the entry is flagged as *unnecessary* (the JAR can likely be removed). If the tests fail, it is marked *needed*.
+5. Restores the original `module.xml` from the backup.
+
+If the script is interrupted (Ctrl+C, SIGTERM, etc.), a signal trap ensures the current `module.xml` is restored from its backup before exiting.
+
+== Prerequisites
+
+* Bash 4+
+* Maven (`mvn` on `PATH`)
+* Standard Unix tools (`awk`, `find`, `sed`, `mktemp`)
+* A WildFly or JBoss EAP installation
+* A Maven project with a test suite that exercises the server's module classpath
+
+== Usage
+
+[source,bash]
+----
+./modulecheck.sh --wildfly-dir <path> --test-dir <path> [options]
+----
+
+=== Options
+
+[cols="1,3"]
+|===
+| Option | Description
+
+| `--wildfly-dir <path>`
+| *(required)* Path to the WildFly installation. Resolved to an absolute path internally.
+
+| `--test-dir <path>`
+| *(required)* Directory containing the `pom.xml` for the test suite.
+
+| `--module-dir <relative-path>`
+| Module directory relative to `--wildfly-dir`. Can be specified multiple times to scan several directories in a single run. Modules from all directories are collected and processed together. Defaults to `modules` if not specified.
+
+| `-t, --test <pattern>`
+| Test filter passed to Maven as `-Dtest=<pattern>`.
+
+| `-v, --verbose`
+| Stream Maven output to stdout as it runs (via `tee`). Without this flag, Maven output is written only to log files.
+
+| `-h, --help`
+| Show usage information.
+|===
+
+== Examples
+
+=== Basic usage with defaults
+
+Scan the default `modules` directory:
+
+[source,bash]
+----
+./modulecheck.sh \
+    --wildfly-dir /opt/wildfly-40.0.0.Final \
+    --test-dir /home/user/my-testsuite
+----
+
+=== Scan multiple module directories
+
+Scan two layer directories within WildFly:
+
+[source,bash]
+----
+./modulecheck.sh \
+    --wildfly-dir /opt/wildfly-40.0.0.Final \
+    --test-dir /home/user/my-testsuite \
+    --module-dir modules/system/layers/base \
+    --module-dir modules/system/layers/custom
+----
+
+=== Filter to a specific test class
+
+Only run a single test class on each iteration to speed up the process:
+
+[source,bash]
+----
+./modulecheck.sh \
+    --wildfly-dir /opt/wildfly-40.0.0.Final \
+    --test-dir /home/user/my-testsuite \
+    --test com.example.SmokeTest
+----
+
+=== Verbose output
+
+Show Maven output in real time while also logging it to files:
+
+[source,bash]
+----
+./modulecheck.sh \
+    --wildfly-dir /opt/wildfly-40.0.0.Final \
+    --test-dir /home/user/my-testsuite \
+    --verbose
+----
+
+== Sample Output
+
+=== Run header
+
+[source]
+----
+========================================================================
+  Module Check -- Unnecessary JAR Detection
+========================================================================
+  WildFly dir:  /opt/wildfly-40.0.0.Final
+  Module dir:   /opt/wildfly-40.0.0.Final/modules/system/layers/base
+  Module dir:   /opt/wildfly-40.0.0.Final/modules/system/layers/custom
+  Test dir:     /home/user/my-testsuite
+  Results:      ./modulecheck-results/
+  Started:      Thu May 29 10:15:42 CDT 2026
+========================================================================
+----
+
+=== Per-module progress
+
+[source]
+----
+----------------------------------------------------------------------
+[Module 3/128] org.jboss.logging (2 entries)
+  File: /opt/wildfly-40.0.0.Final/modules/system/layers/base/org/jboss/logging/main/module.xml
+----------------------------------------------------------------------
+  [  1/2  ] TESTING     path="jboss-logging-3.5.3.Final.jar"
+  [  1/2  ] UNNECESSARY path="jboss-logging-3.5.3.Final.jar"  (1m 23s)
+  [  2/2  ] TESTING     path="jboss-logging-annotations-2.2.1.Final.jar"
+  [  2/2  ] NEEDED      path="jboss-logging-annotations-2.2.1.Final.jar"  (1m 18s)
+----
+
+=== Final summary
+
+[source]
+----
+========================================================================
+                     MODULE CHECK SUMMARY
+========================================================================
+  Total modules scanned:       128
+  Modules with entries:        97
+  Modules skipped (0 entries): 40
+  Total entries tested:        214
+    Needed (tests failed):     198
+    Unnecessary (tests pass):  16
+  Total time:                  4h 42m 11s
+========================================================================
+
+Potentially unnecessary entries:
+/opt/wildfly-40.0.0.Final/modules/.../module.xml:7: path="jboss-logging-3.5.3.Final.jar"
+/opt/wildfly-40.0.0.Final/modules/.../module.xml:5: path="commons-lang3-3.12.0.jar"
+...
+
+Full results: ./modulecheck-results/unnecessary.txt
+Maven logs:   ./modulecheck-results/logs/
+----
+
+== Output Files
+
+All results are written to `./modulecheck-results/`:
+
+`unnecessary.txt`::
+One line per entry that can potentially be removed, in the format `<file>:<line>: <entry description>`.
+
+`summary.txt`::
+A machine-readable copy of the final summary block shown on stdout.
+
+`logs/`::
+Per-entry Maven output files named `<module-slug>_line<N>.log`. Useful for diagnosing why a particular entry was marked as needed or unnecessary.

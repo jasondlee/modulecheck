@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
 WILDFLY_DIR=""
-MODULE_DIR=""
+MODULE_DIRS=()
 TEST_DIR=""
 RESULTS_DIR="./modulecheck-results"
 VERBOSE=false
@@ -20,7 +20,7 @@ START_TIME=""
 
 usage() {
     cat <<EOF
-Usage: $SCRIPT_NAME --wildfly-dir <path> --test-dir <path> [--module-dir <relative-path>]
+Usage: $SCRIPT_NAME --wildfly-dir <path> --test-dir <path> [--module-dir <relative-path> ...]
 
 Identify potentially unnecessary JARs in JBoss/WildFly module definitions by
 commenting out each <resource-root> and <artifact> entry one at a time and
@@ -29,7 +29,7 @@ running a Maven test suite.
 Options:
   --wildfly-dir <path>          Path to the WildFly installation (required)
   --test-dir <path>             Directory containing pom.xml for the test suite (required)
-  --module-dir <relative-path>  Module directory relative to --wildfly-dir (default: modules)
+  --module-dir <relative-path>  Module directory relative to --wildfly-dir (repeatable; default: modules)
   -t, --test <pattern>           Test filter passed to Maven as -Dtest=<pattern>
   -v, --verbose                 Show Maven test output as it runs
   --help, -h                    Show this help message
@@ -56,7 +56,7 @@ parse_args() {
                 ;;
             --module-dir)
                 require_arg "$1" "${2-}"
-                MODULE_DIR="$2"
+                MODULE_DIRS+=("$2")
                 shift 2
                 ;;
             --test-dir)
@@ -102,15 +102,16 @@ parse_args() {
         exit 1
     fi
 
-    if [[ -z "$MODULE_DIR" ]]; then
-        MODULE_DIR="modules"
+    if [[ ${#MODULE_DIRS[@]} -eq 0 ]]; then
+        MODULE_DIRS=("modules")
     fi
-    MODULE_DIR="$WILDFLY_DIR/$MODULE_DIR"
-
-    if [[ ! -d "$MODULE_DIR" ]]; then
-        echo "Error: Module directory does not exist: $MODULE_DIR" >&2
-        exit 1
-    fi
+    for i in "${!MODULE_DIRS[@]}"; do
+        MODULE_DIRS[$i]="$WILDFLY_DIR/${MODULE_DIRS[$i]}"
+        if [[ ! -d "${MODULE_DIRS[$i]}" ]]; then
+            echo "Error: Module directory does not exist: ${MODULE_DIRS[$i]}" >&2
+            exit 1
+        fi
+    done
 }
 
 cleanup() {
@@ -166,8 +167,7 @@ comment_out_line() {
         NR == n {
             match($0, /^[[:space:]]*/);
             indent = substr($0, 1, RLENGTH);
-            content = substr($0, RLENGTH + 1);
-            print indent "<!-- " content " -->";
+            print indent "<!-- removed -->";
             next
         }
         { print }
@@ -214,17 +214,19 @@ main() {
     echo "========================================================================"
     echo "  Module Check — Unnecessary JAR Detection"
     echo "========================================================================"
-    echo "  WildFly dir: $WILDFLY_DIR"
-    echo "  Module dir:  $MODULE_DIR"
-    echo "  Test dir:    $TEST_DIR"
-    echo "  Results:     $RESULTS_DIR/"
-    echo "  Started:     $(date)"
+    echo "  WildFly dir:  $WILDFLY_DIR"
+    for dir in "${MODULE_DIRS[@]}"; do
+        echo "  Module dir:   $dir"
+    done
+    echo "  Test dir:     $TEST_DIR"
+    echo "  Results:      $RESULTS_DIR/"
+    echo "  Started:      $(date)"
     echo "========================================================================"
     echo ""
 
     local module_files
     module_files=$(mktemp)
-    find "$MODULE_DIR" -name "module.xml" -type f | sort > "$module_files"
+    find "${MODULE_DIRS[@]}" -name "module.xml" -type f | sort > "$module_files"
     TOTAL_MODULES=$(wc -l < "$module_files" | tr -d ' ')
 
     local module_index=0
@@ -338,9 +340,11 @@ main() {
 
     {
         echo "Module Check Summary — $(date)"
-        echo "WildFly dir: $WILDFLY_DIR"
-        echo "Module dir:  $MODULE_DIR"
-        echo "Test dir:    $TEST_DIR"
+        echo "WildFly dir:  $WILDFLY_DIR"
+        for dir in "${MODULE_DIRS[@]}"; do
+            echo "Module dir:   $dir"
+        done
+        echo "Test dir:     $TEST_DIR"
         echo ""
         echo "Total modules scanned:       $TOTAL_MODULES"
         echo "Modules with entries:        $TOTAL_MODULES_WITH_ENTRIES"

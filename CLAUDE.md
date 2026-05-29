@@ -9,13 +9,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Running the Script
 
 ```bash
-./check_modules.sh --wildfly-dir /path/to/wildfly --test-dir /path/to/testsuite
+./modulecheck.sh --wildfly-dir /path/to/wildfly --test-dir /path/to/testsuite
+./modulecheck.sh --wildfly-dir /path/to/wildfly --test-dir /path/to/testsuite \
+    --module-dir modules/system/layers/base --module-dir modules/system/layers/custom
 ```
 
 Key options:
 - `--wildfly-dir <path>` — (required) WildFly installation path; resolved to absolute path internally
 - `--test-dir <path>` — (required) directory containing `pom.xml` for the test suite
-- `--module-dir <relative-path>` — module directory relative to `--wildfly-dir` (default: `modules`)
+- `--module-dir <relative-path>` — module directory relative to `--wildfly-dir` (repeatable; default: `modules`). Can be specified multiple times; all directories are searched and their modules are processed together.
 - `-t, --test <pattern>` — passed to Maven as `-Dtest=<pattern>`
 - `-v, --verbose` — streams Maven output to stdout via `tee` (otherwise log-only)
 
