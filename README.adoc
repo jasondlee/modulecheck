@@ -130,10 +130,10 @@ Show Maven output in real time while also logging it to files:
 [Module 3/128] org.jboss.logging (2 entries)
   File: /opt/wildfly-40.0.0.Final/modules/system/layers/base/org/jboss/logging/main/module.xml
 ----------------------------------------------------------------------
-  [  1/2  ] TESTING     path="jboss-logging-3.5.3.Final.jar"
-  [  1/2  ] UNNECESSARY path="jboss-logging-3.5.3.Final.jar"  (1m 23s)
-  [  2/2  ] TESTING     path="jboss-logging-annotations-2.2.1.Final.jar"
-  [  2/2  ] NEEDED      path="jboss-logging-annotations-2.2.1.Final.jar"  (1m 18s)
+  [  1/2  ] TESTING     jboss-logging-3.5.3.Final.jar
+  [  1/2  ] UNNECESSARY jboss-logging-3.5.3.Final.jar  (1m 23s)
+  [  2/2  ] TESTING     jboss-logging-annotations-2.2.1.Final.jar
+  [  2/2  ] NEEDED      jboss-logging-annotations-2.2.1.Final.jar  (1m 18s)
 ----
 
 === Final summary
@@ -153,8 +153,8 @@ Show Maven output in real time while also logging it to files:
 ========================================================================
 
 Potentially unnecessary entries:
-/opt/wildfly-40.0.0.Final/modules/.../module.xml:7: path="jboss-logging-3.5.3.Final.jar"
-/opt/wildfly-40.0.0.Final/modules/.../module.xml:5: path="commons-lang3-3.12.0.jar"
+/opt/wildfly-40.0.0.Final/modules/.../module.xml:7: jboss-logging-3.5.3.Final.jar
+/opt/wildfly-40.0.0.Final/modules/.../module.xml:5: commons-lang3-3.12.0.jar
 ...
 
 Full results: ./modulecheck-results/unnecessary.txt

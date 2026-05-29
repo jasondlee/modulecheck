@@ -182,7 +182,13 @@ comment_out_line() {
 extract_entry_description() {
     local file="$1"
     local line_num="$2"
-    sed -n "${line_num}p" "$file" | grep -oE 'path="[^"]*"|name="[^"]*"' | head -1
+    local line
+    line=$(sed -n "${line_num}p" "$file")
+    if [[ "$line" == *"<resource-root"* ]]; then
+        echo "$line" | grep -oE 'path="[^"]*"' | sed 's/^path="//; s/"$//'
+    elif [[ "$line" == *"<artifact"* ]]; then
+        echo "$line" | grep -oE 'name="[^"]*"' | sed 's/^name="//; s/"$//'
+    fi
 }
 
 extract_module_name() {
@@ -282,9 +288,6 @@ main() {
             local log_file="$RESULTS_DIR/logs/${log_slug}_line${line_num}.log"
 
             local mvn_cmd=(mvn -f "$TEST_DIR/pom.xml" -Dtest="$TEST_FILTER" -Djboss.home="$WILDFLY_DIR" -Djboss.install.dir="$WILDFLY_DIR" clean verify)
-#            if [[ -n "$TEST_FILTER" ]]; then
-#                mvn_cmd+=(-Dtest="$TEST_FILTER")
-#            fi
             local test_start
             test_start=$(date +%s)
             local test_result=0
