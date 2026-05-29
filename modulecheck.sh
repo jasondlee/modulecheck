@@ -219,13 +219,15 @@ main() {
     echo "========================================================================"
     echo "  Module Check — Unnecessary JAR Detection"
     echo "========================================================================"
-    echo "  WildFly dir:  $WILDFLY_DIR"
+    echo "  WildFly dir:   $WILDFLY_DIR"
+    local label="  Module dir(s): "
     for dir in "${MODULE_DIRS[@]}"; do
-        echo "  Module dir:   $dir"
+      echo "$label$dir"
+      label="                 "
     done
-    echo "  Test dir:     $TEST_DIR"
-    echo "  Results:      $RESULTS_DIR/"
-    echo "  Started:      $(date)"
+    echo "  Test dir:      $TEST_DIR"
+    echo "  Results:       $RESULTS_DIR/"
+    echo "  Started:       $(date)"
     echo "========================================================================"
     echo ""
 
