@@ -97,6 +97,11 @@ parse_args() {
         echo "Error: --test-dir is required." >&2
         exit 1
     fi
+    if [[ ! -d "$TEST_DIR" ]]; then
+        echo "Error: Test directory does not exist: $TEST_DIR" >&2
+        exit 1
+    fi
+    TEST_DIR="$(cd "$TEST_DIR" && pwd)"
     if [[ ! -f "$TEST_DIR/pom.xml" ]]; then
         echo "Error: No pom.xml found in test directory: $TEST_DIR" >&2
         exit 1
